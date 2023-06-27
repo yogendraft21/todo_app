@@ -7,16 +7,19 @@ import {
   IconButton,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DoneIcon from '@mui/icons-material/Done';
 import EditIcon from '@mui/icons-material/Edit';
 
 const Todo = () => {
   const [todos, setTodos] = useState([]);
-  const [todoTitle, setTodoTitle] = useState('');
+  const [todoText, setTodoText] = useState('');
   const [todoDescription, setTodoDescription] = useState('');
-  const currentDate = new Date().toLocaleString();
+  const [editingTodoId, setEditingTodoId] = useState(null);
+  const [editTodoText, setEditTodoText] = useState('');
+  const [editTodoDescription, setEditTodoDescription] = useState('');
 
-  const handleTitleChange = (event) => {
-    setTodoTitle(event.target.value);
+  const handleInputChange = (event) => {
+    setTodoText(event.target.value);
   };
 
   const handleDescriptionChange = (event) => {
@@ -24,24 +27,40 @@ const Todo = () => {
   };
 
   const handleAddTodo = () => {
-    if (todoTitle.trim() !== '') {
+    if (todoText.trim() !== '') {
       const newTodo = {
         id: Date.now(),
-        title: todoTitle,
+        title: todoText,
         description: todoDescription,
+        dateTime: new Date().toLocaleString(),
+        color: getRandomColor(),
       };
 
       setTodos([...todos, newTodo]);
-      setTodoTitle('');
+      setTodoText('');
       setTodoDescription('');
     }
   };
 
-  const handleUpdateTodo = (id, field, value) => {
+  const handleEditTodo = (id) => {
+    const todo = todos.find((todo) => todo.id === id);
+    if (todo) {
+      setEditingTodoId(id);
+      setEditTodoText(todo.title);
+      setEditTodoDescription(todo.description);
+    }
+  };
+
+  const handleUpdateTodo = () => {
     const updatedTodos = todos.map((todo) =>
-      todo.id === id ? { ...todo, [field]: value } : todo
+      todo.id === editingTodoId
+        ? { ...todo, title: editTodoText, description: editTodoDescription }
+        : todo
     );
     setTodos(updatedTodos);
+    setEditingTodoId(null);
+    setEditTodoText('');
+    setEditTodoDescription('');
   };
 
   const handleDeleteTodo = (id) => {
@@ -49,24 +68,30 @@ const Todo = () => {
     setTodos(updatedTodos);
   };
 
+  const getRandomColor = () => {
+    const colors = ['#FCE4EC', '#E8F5E9', '#FFFDE7', '#E1F5FE', '#F3E5F5'];
+    const randomIndex = Math.floor(Math.random() * colors.length);
+    return colors[randomIndex];
+  };
+
   return (
     <Box
       display="flex"
       flexDirection="column"
-      justifyContent="center"
+    //   justifyContent="center"
       alignItems="center"
-      height="100vh"
       bgcolor="#f5f5f5"
       p={2}
+      height="100vh"
     >
-      <Box width="400px" bgcolor="white" boxShadow={2} p={2} mb={4} mt={-50}>
+      <Box width="400px" bgcolor="white" boxShadow={2} p={2} mb={4}>
         <Typography variant="h5" gutterBottom>
           Add Todo
         </Typography>
         <TextField
           label="Title"
-          value={todoTitle}
-          onChange={handleTitleChange}
+          value={todoText}
+          onChange={handleInputChange}
           fullWidth
           margin="normal"
           variant="outlined"
@@ -88,9 +113,9 @@ const Todo = () => {
         {todos.map((todo) => (
           <Box
             key={todo.id}
-            width="200px"
+            width="250px"
             height="200px"
-            bgcolor="white"
+            bgcolor={todo.color}
             boxShadow={1}
             borderRadius={4}
             p={2}
@@ -102,67 +127,76 @@ const Todo = () => {
             alignItems="center"
             position="relative"
           >
-            <Typography
-              variant="h6"
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-                maxWidth: '100%',
-              }}
-            >
-              {todo.title}
-            </Typography>
-            <Typography
-              variant="body1"
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-                maxWidth: '100%',
-              }}
-            >
-              {todo.description}
-            </Typography>
-            <Typography
-              variant="caption"
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-                maxWidth: '100%',
-              }}
-            >
-              {currentDate}
-            </Typography>
-            <Box display="flex" justifyContent="center">
-              <IconButton
-                color="secondary"
-                onClick={() => handleDeleteTodo(todo.id)}
-                style={{
-                  position: 'absolute',
-                  bottom: '8px',
-                  left: '40%',
-                  transform: 'translateX(-50%)',
-                }}
-              >
-                <DeleteIcon />
-              </IconButton>
-              <IconButton
-                color="primary"
-                style={{
-                  position: 'absolute',
-                  bottom: '8px',
-                  right: '40%',
-                  transform: 'translateX(50%)',
-                }}
-              >
-                <EditIcon />
-              </IconButton>
-            </Box>
+            {editingTodoId === todo.id ? (
+              <>
+                <TextField
+                  label="Title"
+                  value={editTodoText}
+                  onChange={(e) => setEditTodoText(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  variant="outlined"
+                />
+                <TextField
+                  label="Description"
+                  value={editTodoDescription}
+                  onChange={(e) => setEditTodoDescription(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  variant="outlined"
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleUpdateTodo}
+                  fullWidth
+                  style={{ marginTop: '8px' }}
+                >
+                  Done
+                </Button>
+              </>
+            ) : (
+              <>
+                <Typography variant="h6" align="center">
+                  {todo.title}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" align="center">
+                  {todo.description}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" align="center">
+                  {todo.dateTime}
+                </Typography>
+              </>
+            )}
+
+            {!editingTodoId && (
+              <Box display="flex" justifyContent="center" mt={1}>
+                <IconButton
+                  color="secondary"
+                  onClick={() => handleDeleteTodo(todo.id)}
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '40%',
+                    transform: 'translateX(-50%)',
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+                <IconButton
+                  color="primary"
+                  onClick={() => handleEditTodo(todo.id)}
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '40%',
+                    transform: 'translateX(50%)',
+                  }}
+                >
+                  <EditIcon />
+                </IconButton>
+              </Box>
+            )}
           </Box>
         ))}
       </Box>
