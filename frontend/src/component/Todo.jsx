@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Typography,
   TextField,
@@ -9,6 +9,12 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import DoneIcon from '@mui/icons-material/Done';
 import EditIcon from '@mui/icons-material/Edit';
+import {
+  fetchTodos,
+  createTodo,
+  updateTodo,
+  deleteTodo,
+} from '../api'; // Assuming `api.js` is in the same directory
 
 const Todo = () => {
   const [todos, setTodos] = useState([]);
@@ -17,6 +23,20 @@ const Todo = () => {
   const [editingTodoId, setEditingTodoId] = useState(null);
   const [editTodoText, setEditTodoText] = useState('');
   const [editTodoDescription, setEditTodoDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchAllTodos();
+  }, []);
+
+  const fetchAllTodos = async () => {
+    try {
+      const todos = await fetchTodos();
+      setTodos(todos);
+    } catch (error) {
+      console.error('Error fetching todos:', error);
+    }
+  };
 
   const handleInputChange = (event) => {
     setTodoText(event.target.value);
@@ -26,24 +46,28 @@ const Todo = () => {
     setTodoDescription(event.target.value);
   };
 
-  const handleAddTodo = () => {
+  const handleAddTodo = async () => {
     if (todoText.trim() !== '') {
       const newTodo = {
-        id: Date.now(),
         title: todoText,
         description: todoDescription,
         dateTime: new Date().toLocaleString(),
-        color: getRandomColor(),
+        color: getRandomColor(), 
       };
 
-      setTodos([...todos, newTodo]);
-      setTodoText('');
-      setTodoDescription('');
+      try {
+        const createdTodo = await createTodo(newTodo);
+        setTodos([...todos, createdTodo]);
+        setTodoText('');
+        setTodoDescription('');
+      } catch (error) {
+        console.error('Error creating todo:', error);
+      }
     }
   };
 
   const handleEditTodo = (id) => {
-    const todo = todos.find((todo) => todo.id === id);
+    const todo = todos.find((todo) => todo._id === id);
     if (todo) {
       setEditingTodoId(id);
       setEditTodoText(todo.title);
@@ -51,22 +75,45 @@ const Todo = () => {
     }
   };
 
-  const handleUpdateTodo = () => {
-    const updatedTodos = todos.map((todo) =>
-      todo.id === editingTodoId
-        ? { ...todo, title: editTodoText, description: editTodoDescription }
-        : todo
-    );
-    setTodos(updatedTodos);
-    setEditingTodoId(null);
-    setEditTodoText('');
-    setEditTodoDescription('');
+  const handleUpdateTodo = async () => {
+    const updatedTodo = {
+      title: editTodoText,
+      description: editTodoDescription,
+    };
+
+    try {
+      const updatedTodoData = await updateTodo(editingTodoId, updatedTodo);
+      const updatedTodos = todos.map((todo) =>
+        todo._id === editingTodoId ? updatedTodoData : todo
+      );
+      setTodos(updatedTodos);
+      setEditingTodoId(null);
+      setEditTodoText('');
+      setEditTodoDescription('');
+    } catch (error) {
+      console.error('Error updating todo:', error);
+    }
   };
 
-  const handleDeleteTodo = (id) => {
-    const updatedTodos = todos.filter((todo) => todo.id !== id);
-    setTodos(updatedTodos);
+  const handleDeleteTodo = async (id) => {
+    try {
+      await deleteTodo(id);
+      const updatedTodos = todos.filter((todo) => todo._id !== id);
+      setTodos(updatedTodos);
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+    }
   };
+
+  const handleSearchInputChange = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const filteredTodos = todos.filter((todo) => {
+    const titleMatches = todo.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const descriptionMatches = todo.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return titleMatches || descriptionMatches;
+  });
 
   const getRandomColor = () => {
     const colors = ['#FCE4EC', '#E8F5E9', '#FFFDE7', '#E1F5FE', '#F3E5F5'];
@@ -78,7 +125,6 @@ const Todo = () => {
     <Box
       display="flex"
       flexDirection="column"
-    //   justifyContent="center"
       alignItems="center"
       bgcolor="#f5f5f5"
       p={2}
@@ -109,10 +155,21 @@ const Todo = () => {
         </Button>
       </Box>
 
+      <Box width="400px" bgcolor="white" boxShadow={2} p={2} mb={4}>
+        <TextField
+          label="Search"
+          value={searchQuery}
+          onChange={handleSearchInputChange}
+          fullWidth
+          margin="normal"
+          variant="outlined"
+        />
+      </Box>
+
       <Box display="flex" flexWrap="wrap" justifyContent="center">
-        {todos.map((todo) => (
+        {filteredTodos.map((todo) => (
           <Box
-            key={todo.id}
+            key={todo._id}
             width="250px"
             height="200px"
             bgcolor={todo.color}
@@ -127,7 +184,7 @@ const Todo = () => {
             alignItems="center"
             position="relative"
           >
-            {editingTodoId === todo.id ? (
+            {editingTodoId === todo._id ? (
               <>
                 <TextField
                   label="Title"
@@ -173,7 +230,7 @@ const Todo = () => {
               <Box display="flex" justifyContent="center" mt={1}>
                 <IconButton
                   color="secondary"
-                  onClick={() => handleDeleteTodo(todo.id)}
+                  onClick={() => handleDeleteTodo(todo._id)}
                   style={{
                     position: 'absolute',
                     bottom: '8px',
@@ -185,7 +242,7 @@ const Todo = () => {
                 </IconButton>
                 <IconButton
                   color="primary"
-                  onClick={() => handleEditTodo(todo.id)}
+                  onClick={() => handleEditTodo(todo._id)}
                   style={{
                     position: 'absolute',
                     bottom: '8px',
